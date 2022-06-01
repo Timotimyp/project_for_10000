@@ -1,19 +1,25 @@
 import telebot
 from telebot import types
-from data import db_session
-from data.all import all
-from data.cat import cat
 import pymorphy2
-import wikipedia, re
+import wikipedia
+from flask import Flask
+from flask_login import LoginManager
+import base64
+import requests
+
+
+app = Flask(__name__)
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
 
 
 morph = pymorphy2.MorphAnalyzer()
 wikipedia.set_lang("ru")
 
-bot = telebot.TeleBot('5317333483:AAE-7tTnPlld9XydPWDIVipq0CDH-DVABgU')
-
-q = {"0": "Напитки", "1": "Товары", "2": "Разное"}
-q2 = {}
+bot = telebot.TeleBot('5346598071:AAFQP1F3IO1Hzea2ECj0a5WsyP_dn5-_fUk')
 
 
 markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -23,9 +29,14 @@ btn3_1 = types.KeyboardButton("Добавить Категорию")
 btn4_1 = types.KeyboardButton("Изменить Категорию")
 btn5_1 = types.KeyboardButton("Удалить Категорию")
 btn6_1 = types.KeyboardButton("Удалить Позицию")
+btn7_1 = types.KeyboardButton("Изменить самовывоз")
+btn8_1 = types.KeyboardButton("Изменить доставку")
+btn9_1 = types.KeyboardButton("Пороговая сумма доставки")
 markup.add(btn1_1, btn3_1)
 markup.add(btn2_1, btn4_1)
 markup.add(btn6_1, btn5_1)
+markup.add(btn7_1, btn8_1)
+markup.add(btn9_1)
 
 
 markup_del = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -36,16 +47,18 @@ markup_del.add(btn1_1, btn2_1)
 
 @bot.message_handler(commands=["start"])
 def start(message):
-    bot.send_message(message.chat.id, 'Приветствую, для начала выберете категорию', reply_markup=markup)
+    bot.send_message(message.chat.id, 'Это бот для редактирования. Здесь вы можете создавать, менять,'
+                                      ' удалять категории и позиции.'
+                                      'Хочу напомнить, что изначально цена доставки и самовывоза 0 рублей.'
+                                      'Также прошу, когда вы пишите стоимость, пожалуйста, не пишите'
+                                      'валюту', reply_markup=markup)
 
 
 @bot.message_handler(content_types=["text"])
 def func(message):
     if message.text == "Изменить Категорию":
         markup_2 = types.InlineKeyboardMarkup()
-        db_sess = db_session.create_session()
-        q = [prof.category_new for prof in db_sess.query(cat).all()]
-        q = sorted(q)
+        q = requests.get('/api/sorted_keys').json()['q']
         if q:
             for i in q:
                 btn1 = types.InlineKeyboardButton(i, callback_data=i)
@@ -55,15 +68,11 @@ def func(message):
         else:
             bot.send_message(message.chat.id, 'Для начала добавьте хоть одну категорию', reply_markup=markup)
     if message.text == "Добавить Категорию":
-        db_sess = db_session.create_session()
-        q = [prof.category for prof in db_sess.query(cat).all()]
         r = bot.send_message(message.chat.id, "Напишите Новую Категорию", reply_markup=types.ReplyKeyboardRemove())
         bot.register_next_step_handler(r, rr)
     if message.text == "Добавить Позицию":
         markup_2 = types.InlineKeyboardMarkup()
-        db_sess = db_session.create_session()
-        q = [prof.category_new for prof in db_sess.query(cat).all()]
-        q = sorted(q)
+        q = requests.get('/api/sorted_keys').json()['q']
         if q:
             for i in q:
                 btn1 = types.InlineKeyboardButton(i, callback_data=f"pos_{i}")
@@ -74,9 +83,7 @@ def func(message):
             bot.send_message(message.chat.id, 'Для начала добавьте хоть одну категорию', reply_markup=markup)
     if message.text == "Изменить Позицию":
         markup_2 = types.InlineKeyboardMarkup()
-        db_sess = db_session.create_session()
-        q = [prof.category_new for prof in db_sess.query(cat).all()]
-        q = sorted(q)
+        q = requests.get('/api/sorted_keys').json()['q']
         if q:
             for i in q:
                 btn1 = types.InlineKeyboardButton(i, callback_data=f"pos_cor_{i}")
@@ -87,9 +94,7 @@ def func(message):
             bot.send_message(message.chat.id, 'Для начала добавьте хоть одну позицию', reply_markup=markup)
     if message.text == "Удалить Категорию":
         markup_2 = types.InlineKeyboardMarkup()
-        db_sess = db_session.create_session()
-        q = [prof.category_new for prof in db_sess.query(cat).all()]
-        q = sorted(q)
+        q = requests.get('/api/sorted_keys').json()['q']
         if q:
             for i in q:
                 btn1 = types.InlineKeyboardButton(i, callback_data=f"del_{i}")
@@ -100,9 +105,7 @@ def func(message):
             bot.send_message(message.chat.id, 'Для начала добавьте хоть одну категорию', reply_markup=markup)
     if message.text == "Удалить Позицию":
         markup_2 = types.InlineKeyboardMarkup()
-        db_sess = db_session.create_session()
-        q = [prof.category_new for prof in db_sess.query(cat).all()]
-        q = sorted(q)
+        q = requests.get('/api/sorted_keys').json()['q']
         if q:
             for i in q:
                 btn1 = types.InlineKeyboardButton(i, callback_data=f"pos_del_{i}")
@@ -111,164 +114,329 @@ def func(message):
             bot.send_message(message.chat.id, 'Для начала выберете категорию', reply_markup=markup_2)
         else:
             bot.send_message(message.chat.id, 'Для начала добавьте хоть одну категорию', reply_markup=markup)
+    if message.text == "Изменить самовывоз":
+        r = bot.send_message(message.chat.id, "Напишите новую стоимость самовывоза", reply_markup=types.ReplyKeyboardMarkup())
+        bot.register_next_step_handler(r, self_delivery)
+    if message.text == "Изменить доставку":
+        r = bot.send_message(message.chat.id, "Напишите новую стоимость Доставки", reply_markup=types.ReplyKeyboardMarkup())
+        bot.register_next_step_handler(r, delivery_delivery)
+    if message.text == "Пороговая сумма доставки":
+        r = bot.send_message(message.chat.id, "Напишите новую стоимость пороговую стоимость", reply_markup=types.ReplyKeyboardMarkup())
+        bot.register_next_step_handler(r, porog_delivery)
+
+
+def self_delivery(message):
+    try:
+        if message.text != None:
+            try:
+                int(message.text)
+                r = requests.post('', json={'cost': int(message.text)}).json()
+                if "success" in dict(r).keys():
+                    bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
+            except ValueError:
+                r = bot.send_message(message.chat.id, "Напишите новую стоимость самовывоза",
+                                     reply_markup=types.ReplyKeyboardMarkup())
+                bot.register_next_step_handler(r, self_delivery)
+        else:
+            raise Exception
+    except Exception:
+        r = bot.send_message(message.chat.id, "Напишите новую стоимость самовывоза",
+                             reply_markup=types.ReplyKeyboardMarkup())
+        bot.register_next_step_handler(r, self_delivery)
+
+    # fi = db_sess.query(delivery).all()
+    # fi2 = [i.delivery for i in fi]
+    # print(fi2)
+
+
+def delivery_delivery(message):
+    try:
+        if message.text != None:
+            try:
+                int(message.text)
+                r = requests.post('', json={'cost': int(message.text)}).json()
+                if "success" in dict(r).keys():
+                    bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
+            except ValueError:
+                r = bot.send_message(message.chat.id, "Напишите новую стоимость Доставки",
+                                     reply_markup=types.ReplyKeyboardMarkup())
+                bot.register_next_step_handler(r, delivery_delivery)
+        else:
+            raise Exception
+    except Exception:
+        r = bot.send_message(message.chat.id, "Напишите новую стоимость Доставки",
+                             reply_markup=types.ReplyKeyboardMarkup())
+        bot.register_next_step_handler(r, delivery_delivery)
+
+
+def porog_delivery(message):
+    try:
+        if message.text != None:
+            try:
+                int(message.text)
+                r = requests.post('', json={'cost': int(message.text)}).json()
+                if "success" in dict(r).keys():
+                    bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
+            except ValueError:
+                r = bot.send_message(message.chat.id, "Напишите новую стоимость пороговую стоимость",
+                                     reply_markup=types.ReplyKeyboardMarkup())
+                bot.register_next_step_handler(r, porog_delivery)
+        else:
+            raise Exception
+    except Exception:
+        r = bot.send_message(message.chat.id, "Напишите новую стоимость пороговую стоимость",
+                             reply_markup=types.ReplyKeyboardMarkup())
+        bot.register_next_step_handler(r, porog_delivery)
 
 
 def rr(message):
-    user = cat()
-    user.category = message.text
-    user.category_new = message.text
-    db_sess = db_session.create_session()
-    db_sess.add(user)
-    db_sess.commit()
-    bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
+    try:
+        if message.text != None:
+            r = requests.post('', json={'cat': message.text, 'cat_new': message.text}).json()
+            if "success" in dict(r).keys():
+                bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
+        else:
+            raise Exception
+    except Exception:
+        r = bot.send_message(message.chat.id, "Напишите Новую Категорию", reply_markup=types.ReplyKeyboardRemove())
+        bot.register_next_step_handler(r, rr)
 
 
 def rr2(message, e):
-    db_sess = db_session.create_session()
-    news = db_sess.query(cat).get(e)
-    db_sess.delete(news)
-    db_sess.commit()
-    user = cat()
-    user.category = e
-    user.category_new = message.text
-    db_sess.add(user)
-    db_sess.commit()
-    bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
-
-
-def rr3(message, e):
-    db_sess = db_session.create_session()
     try:
-        fi = db_sess.query(cat).filter(cat.category_new == e).first()
-        fi2 = db_sess.query(all).filter(all.category == fi.category).first()
-        news = db_sess.query(all).get(fi.category)
-        db_sess.delete(news)
-        db_sess.commit()
-        user = all()
-        user.category = fi.category
-        if message.text not in fi2.position:
-            user.position = message.text + "//" + fi2.position
+        if message.text != None:
+            r = requests.post('', json={'cat': e, 'cat_new': message.text}).json()
+            if "success" in dict(r).keys():
+                bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
         else:
-            user.position = fi2.position
-
+            raise Exception
     except Exception:
-        fi = db_sess.query(cat).filter(cat.category_new == e).first()
-        db_sess.commit()
-        user = all()
-        user.category = fi.category
-        user.position = message.text
-    db_sess.add(user)
-    db_sess.commit()
-    bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
+        r = bot.send_message(message.chat.id, "Напишите Новую Категорию", reply_markup=types.ReplyKeyboardRemove())
+        bot.register_next_step_handler(r, rr2, e)
 
 
-def rr4(message, e, e1):
-    db_sess = db_session.create_session()
+def rr3(message, e, name,  photo, description):
     try:
-        fi = db_sess.query(cat).filter(cat.category_new == e).first()
-        fi2 = db_sess.query(all).filter(all.category == fi.category).first()
-        fi2 = fi2.position.replace(e1, "")
-        news = db_sess.query(all).get(fi.category)
-        db_sess.delete(news)
-        db_sess.commit()
-        user = all()
-        user.category = fi.category
-        user.position = fi2 + "//" + message.text
-        db_sess.add(user)
-        db_sess.commit()
-        bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
+        int(message.text)
+        r = requests.post('', json={'category': e, 'name': name, 'photo': photo, 'description': description, 'cost': int(message.text)}).json()
+        if "success" in dict(r).keys():
+            bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
+    except TypeError:
+        r = bot.send_message(message.chat.id, "Напишите Стоимость")
+        bot.register_next_step_handler(r, rr3, e, name, photo, message.text)
+
+
+@bot.message_handler(content_types=['document'])
+def posit_first(message, category):
+    fi2 = requests.get(f'/api/get_first_fi2/{category}').json()['fi2']
+    if fi2 == None:
+        fi2 = {}
+    else:
+        fi2 = sorted(dict(fi2.position).keys())
+    try:
+        if message.text != None and message.text not in fi2:
+            r = bot.send_message(message.chat.id, "Отправьте Фотографию")
+            bot.register_next_step_handler(r, posit_second, category, message.text)
+        else:
+            raise Exception
     except Exception:
-        pass
+        r = bot.send_message(message.chat.id, "Напишите Новую Позицию", reply_markup=types.ReplyKeyboardRemove())
+        bot.register_next_step_handler(r, posit_first, category)
+        # bot.send_message(message.chat.id, "Ошибка попробуйте сначала", reply_markup=markup)
+
+
+@bot.message_handler(content_types=['document'])
+def posit_second(message, category,  name):
+    if message.photo:
+        fileID = message.photo[-1].file_id
+        file_info = bot.get_file(fileID)
+        downloaded_file = bot.download_file(file_info.file_path)
+
+        with open("image.jpg", 'wb') as new_file:
+            new_file.write(downloaded_file)
+        encoded = base64.b64encode(open("image.jpg", "rb").read())
+        r = bot.send_message(message.chat.id, "Напишите описание")
+        bot.register_next_step_handler(r, posit_third, category,  name, str(encoded))
+    else:
+        r = bot.send_message(message.chat.id, "Отправьте Фотографию")
+        bot.register_next_step_handler(r, posit_second, category, message.text)
+
+
+def posit_third(message, category, name,  photo):
+    try:
+        if message.text != None:
+            r = bot.send_message(message.chat.id, "Напишите Стоимость")
+            bot.register_next_step_handler(r, rr3, category, name, photo, message.text)
+        else:
+            raise Exception
+    except Exception:
+        r = bot.send_message(message.chat.id, "Напишите описание")
+        bot.register_next_step_handler(r, posit_third, category, name, photo)
+
+
+def correct_pos(message, posit, cat_old):
+    try:
+        if message.text != None:
+            r = requests.post('', json={'cat_old': cat_old, 'posit': posit, 'new_pos': message.text}).json()
+            if "success" in dict(r).keys():
+                bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
+        else:
+            raise Exception
+    except Exception:
+        r = bot.send_message(message.chat.id, "Напишите Новую Позицию",
+                             reply_markup=types.ReplyKeyboardRemove())
+        bot.register_next_step_handler(r, correct_pos, posit, cat_old)
+
+
+@bot.message_handler(content_types=['document'])
+def correct_photo(message, posit, cat_old):
+    if message.photo:
+        fileID = message.photo[-1].file_id
+        file_info = bot.get_file(fileID)
+        downloaded_file = bot.download_file(file_info.file_path)
+
+        with open("image.jpg", 'wb') as new_file:
+            new_file.write(downloaded_file)
+        encoded = base64.b64encode(open("image.jpg", "rb").read())
+        r = requests.post('', json={'cat_old': cat_old, 'posit': posit, 'encoded': str(encoded)}).json()
+        if "success" in dict(r).keys():
+            bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
+    else:
+        r = bot.send_message(message.chat.id, "Отправьте Фотографию")
+        bot.register_next_step_handler(r, correct_photo, posit, cat_old)
+
+
+def correct_description(message, posit, cat_old):
+    try:
+        if message.text != None:
+            r = requests.post('', json={'cat_old': cat_old, 'posit': posit, 'description': message.text}).json()
+            if "success" in dict(r).keys():
+                bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
+        else:
+            raise Exception
+    except Exception:
+        r = bot.send_message(message.chat.id, "Напишите новое описание")
+        bot.register_next_step_handler(r, correct_description, posit, cat_old)
+
+
+def correct_cost(message, posit, cat_old):
+    try:
+        int(message.text)
+        try:
+            r = requests.post('', json={'cat_old': cat_old, 'posit': posit, 'cost': int(message.text)}).json()
+            if "success" in dict(r).keys():
+                bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
+        except Exception:
+            bot.send_message(message.chat.id, "Ошибка попробуйте сначала", reply_markup=markup)
+    except ValueError:
+        r = bot.send_message(message.chat.id, "Напишите Стоимость")
+        bot.register_next_step_handler(r, correct_cost, posit, cat_old)
 
 
 @bot.callback_query_handler(func=lambda c:True)
 def inline(c):
-    db_sess = db_session.create_session()
-    q = [prof.category_new for prof in db_sess.query(cat).all()]
-    q = sorted(q)
+    q = requests.get('/api/sorted_keys').json()['q']
     if c.data in q:
         r = bot.send_message(c.message.chat.id, "Напишите Новую Категорию", reply_markup=types.ReplyKeyboardRemove())
         bot.register_next_step_handler(r, rr2, c.data)
     elif "del_" in c.data and c.data[4:] in q:
-        print(c.data[4:])
         try:
-            db_sess = db_session.create_session()
-            fi = db_sess.query(cat).filter(cat.category_new == c.data[4:]).first()
-            news = db_sess.query(cat).get(fi.category)
-            db_sess.delete(news)
-            db_sess.commit()
-            bot.send_message(c.message.chat.id, "Всё успешно выполнено", reply_markup=markup)
+            r = requests.post('', json={'cat_old': c.data[4:]}).json()
+            if "success" in dict(r).keys():
+                bot.send_message(c.message.chat.id, "Всё успешно выполнено", reply_markup=markup)
         except Exception:
-            pass
+            bot.send_message(c.message.chat.id, "Ошибка", reply_markup=markup)
     elif c.data[4:] in q and "pos_" in c.data:
         r = bot.send_message(c.message.chat.id, "Напишите Новую Позицию", reply_markup=types.ReplyKeyboardRemove())
-        bot.register_next_step_handler(r, rr3, c.data[4:])
+        bot.register_next_step_handler(r, posit_first, c.data[4:])
     elif c.data[8:] in q and "pos_cor_" in c.data:
-        db_sess = db_session.create_session()
         try:
-            fi = db_sess.query(cat).filter(cat.category_new == c.data[8:]).first()
-            fi2 = db_sess.query(all).filter(all.category == fi.category).first()
-            fi2 = sorted(i for i in fi2.position.split("//"))
-            print(fi2)
+            fi2 = requests.get(f'/api/get_first_fi2/{c.data[8:]}').json()['fi2']
+            fi2 = sorted(dict(fi2.position).keys())
             markup_4 = types.InlineKeyboardMarkup()
-            for i in fi2:
-                btn1 = types.InlineKeyboardButton(i, callback_data=f"{c.data[8:]}/{i}")
-                markup_4.add(btn1)
-            bot.send_message(c.message.chat.id, "Выберите Позицию", reply_markup=markup_4)
+            if fi2:
+                for i in fi2:
+                    btn1 = types.InlineKeyboardButton(i, callback_data=f"pos_cor_new_{c.data[8:]}/{i}")
+                    markup_4.add(btn1)
+                bot.send_message(c.message.chat.id, "Выберите Позицию", reply_markup=markup_4)
+            else:
+                bot.send_message(c.message.chat.id, "У вас нет ни одной позиции, добавьте хоть одну позицию",
+                                 reply_markup=markup)
 
         except Exception:
             bot.send_message(c.message.chat.id, "У вас нет ни одной позиции, добавьте хоть одну позицию", reply_markup=markup)
     elif c.data.split('/')[0] in q:
         try:
-            fi = db_sess.query(cat).filter(cat.category_new == c.data.split('/')[0]).first()
-            fi2 = db_sess.query(all).filter(all.category == fi.category).first()
-            fi2 = sorted(i for i in fi2.position.split("//"))
-            if c.data.split('/')[-1] in fi2:
-                r = bot.send_message(c.message.chat.id, "Напишите Новую Позицию", reply_markup=types.ReplyKeyboardRemove())
-                bot.register_next_step_handler(r, rr4, c.data.split('/')[0], c.data.split('/')[-1])
+            cat_old = c.data.split('/')[1]
+            podition_ppp = c.data.split('/')[2]
+            podition_old = c.data.split('/')[-1]
+            if podition_ppp == "Позиция":
+                r = bot.send_message(c.message.chat.id, "Напишите Новую Позицию",
+                                     reply_markup=types.ReplyKeyboardRemove())
+                bot.register_next_step_handler(r, correct_pos, podition_old, cat_old)
+            if podition_ppp == "Фото":
+                r = bot.send_message(c.message.chat.id, "Отправьте Новую Фотографию")
+                bot.register_next_step_handler(r, correct_photo, podition_old, cat_old)
+            if podition_ppp == "Описание":
+                r = bot.send_message(c.message.chat.id, "Напишите новое описание")
+                bot.register_next_step_handler(r, correct_description, podition_old, cat_old)
+            if podition_ppp == "Стоимость":
+                r = bot.send_message(c.message.chat.id, "Напишите Новую стоимость")
+                bot.register_next_step_handler(r, correct_cost, podition_old, cat_old)
         except Exception:
-            pass
+            bot.send_message(c.message.chat.id, "Ошибка", reply_markup=markup)
     elif c.data[8:] in q and "pos_del_" in c.data:
-        db_sess = db_session.create_session()
         try:
-            fi = db_sess.query(cat).filter(cat.category_new == c.data[8:]).first()
-            fi2 = db_sess.query(all).filter(all.category == fi.category).first()
-            fi2 = sorted(i for i in fi2.position.split("//"))
+            fi = requests.get(f'/api/get_fi/{c.data[8:]}').json()['fi']
+            fi2 = requests.get(f'/api/get_first_fi2/{c.data[8:]}').json()['fi2']
+            fi2 = sorted(dict(fi2.position).keys())
             markup_4 = types.InlineKeyboardMarkup()
             for i in fi2:
-                btn1 = types.InlineKeyboardButton(i, callback_data=f"del_{c.data[8:]}/{i}")
+                btn1 = types.InlineKeyboardButton(i, callback_data=f"del_pos_{c.data[8:]}/{fi.category}/{i}")
                 markup_4.add(btn1)
             bot.send_message(c.message.chat.id, "Выберите Позицию", reply_markup=markup_4)
 
         except Exception:
             bot.send_message(c.message.chat.id, "У вас нет ни одной позиции, добавьте хоть одну позицию", reply_markup=markup)
     elif c.data.split('/')[0][4:] in q:
-        db_sess = db_session.create_session()
         try:
-            fi = db_sess.query(cat).filter(cat.category_new == c.data.split('/')[0][4:]).first()
-            fi2 = db_sess.query(all).filter(all.category == fi.category).first()
-            fi2 = fi2.position.replace(c.data.split('/')[-1], "")
-            print(c.data.split('/')[-1])
-            print(fi2)
-            news = db_sess.query(all).get(fi.category)
-            db_sess.delete(news)
-            db_sess.commit()
-            user = all()
-            user.category = fi.category
-            user.position = fi2
-            db_sess.add(user)
-            db_sess.commit()
-            bot.send_message(c.message.chat.id, "Всё успешно выполнено", reply_markup=markup)
+            r = requests.post('', json={'1': c.data.split('/')[0][4:], '2': c.data.split('/')[-1]}).json()
+            if "success" in dict(r).keys():
+                bot.send_message(c.message.chat.id, "Всё успешно выполнено", reply_markup=markup)
         except Exception:
             pass
+    elif c.data[12:].split("/")[0] in q and "pos_cor_new_" in c.data:
+        try:
+            fi2 = requests.get(f"/api/get_first_fi2/{c.data[12:].split('/')[0]}").json()['fi2']
+            fi = requests.get(f"/api/get_fi/{c.data[12:].split('/')[0]}").json()['fi']
+            fi2 = sorted(dict(fi2.position).keys())
+            if c.data[12:].split('/')[-1] in fi2:
+                markup_4 = types.InlineKeyboardMarkup()
+                w = ["Позиция", "Фото", "Описание", "Стоимость"]
+                for i in w:
+                    btn1 = types.InlineKeyboardButton(i, callback_data=f"{c.data[12:].split('/')[0]}/{fi.category}/{i}/{c.data[12:].split('/')[-1]}")
+                    markup_4.add(btn1)
+                bot.send_message(c.message.chat.id, "Выберите что хотите Изменить", reply_markup=markup_4)
 
+        except Exception:
+            bot.send_message(c.message.chat.id, "Ошибка", reply_markup=markup)
+    elif c.data[8:].split("/")[0] in q and "del_pos_" in c.data:
+        try:
+            r = requests.post('', json={'position1': c.data[8:].split("/")[1], 'position2': c.data[8:].split("/")[-1]}).json()
+            if "success" in dict(r).keys():
+                bot.send_message(c.message.chat.id, "Всё успешно выполнено", reply_markup=markup)
+        except Exception:
+            bot.send_message(c.message.chat.id, "Ошибка", reply_markup=markup)
 
-# bot.infinity_polling()
-# bot.polling(none_stop=True, interval=0)
 
 if __name__ == '__main__':
-    db_session.global_init("db/users.db")
-    db_sess = db_session.create_session()
+    # user = delivery()
+    # user.delivery = "Порог"
+    # user.cost = 1000
+    # db_sess.add(user)
+    # db_sess.commit()
+    # app.register_blueprint(news_api.blueprint)
+    # app.run(port=5000, host='127.0.0.1')
     # fi2 = db_sess.query(all).filter(all.category == "eat").first()
     # print(fi2)
     # user = all()
