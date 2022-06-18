@@ -4,6 +4,7 @@ import pymorphy2
 import wikipedia
 from flask import Flask
 from flask_login import LoginManager
+from flask_restful import Api, Resource, reqparse
 import base64
 import requests
 
@@ -58,7 +59,7 @@ def start(message):
 def func(message):
     if message.text == "Изменить Категорию":
         markup_2 = types.InlineKeyboardMarkup()
-        q = requests.get('/api/sorted_keys').json()['q']
+        q = requests.get('https://serverfor10000.herokuapp.com/api/sorted_keys').json()['q']
         if q:
             for i in q:
                 btn1 = types.InlineKeyboardButton(i, callback_data=i)
@@ -72,7 +73,7 @@ def func(message):
         bot.register_next_step_handler(r, rr)
     if message.text == "Добавить Позицию":
         markup_2 = types.InlineKeyboardMarkup()
-        q = requests.get('/api/sorted_keys').json()['q']
+        q = requests.get('https://serverfor10000.herokuapp.com/api/sorted_keys').json()['q']
         if q:
             for i in q:
                 btn1 = types.InlineKeyboardButton(i, callback_data=f"pos_{i}")
@@ -83,7 +84,7 @@ def func(message):
             bot.send_message(message.chat.id, 'Для начала добавьте хоть одну категорию', reply_markup=markup)
     if message.text == "Изменить Позицию":
         markup_2 = types.InlineKeyboardMarkup()
-        q = requests.get('/api/sorted_keys').json()['q']
+        q = requests.get('https://serverfor10000.herokuapp.com/api/sorted_keys').json()['q']
         if q:
             for i in q:
                 btn1 = types.InlineKeyboardButton(i, callback_data=f"pos_cor_{i}")
@@ -94,7 +95,7 @@ def func(message):
             bot.send_message(message.chat.id, 'Для начала добавьте хоть одну позицию', reply_markup=markup)
     if message.text == "Удалить Категорию":
         markup_2 = types.InlineKeyboardMarkup()
-        q = requests.get('/api/sorted_keys').json()['q']
+        q = requests.get('https://serverfor10000.herokuapp.com/api/sorted_keys').json()['q']
         if q:
             for i in q:
                 btn1 = types.InlineKeyboardButton(i, callback_data=f"del_{i}")
@@ -105,7 +106,7 @@ def func(message):
             bot.send_message(message.chat.id, 'Для начала добавьте хоть одну категорию', reply_markup=markup)
     if message.text == "Удалить Позицию":
         markup_2 = types.InlineKeyboardMarkup()
-        q = requests.get('/api/sorted_keys').json()['q']
+        q = requests.get('https://serverfor10000.herokuapp.com/api/sorted_keys').json()['q']
         if q:
             for i in q:
                 btn1 = types.InlineKeyboardButton(i, callback_data=f"pos_del_{i}")
@@ -129,8 +130,9 @@ def self_delivery(message):
     try:
         if message.text != None:
             try:
-                int(message.text)
-                r = requests.post('', json={'cost': int(message.text)}).json()
+                w = int(message.text)
+                r = requests.post('https://serverfor10000.herokuapp.com/api/self_delivery_post', json={'cost': w}).json()
+                print(1)
                 if "success" in dict(r).keys():
                     bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
             except ValueError:
@@ -144,17 +146,13 @@ def self_delivery(message):
                              reply_markup=types.ReplyKeyboardMarkup())
         bot.register_next_step_handler(r, self_delivery)
 
-    # fi = db_sess.query(delivery).all()
-    # fi2 = [i.delivery for i in fi]
-    # print(fi2)
-
 
 def delivery_delivery(message):
     try:
         if message.text != None:
             try:
                 int(message.text)
-                r = requests.post('', json={'cost': int(message.text)}).json()
+                r = requests.post('https://serverfor10000.herokuapp.com/api/delivery_delivery_post', json={'cost': int(message.text)}).json()
                 if "success" in dict(r).keys():
                     bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
             except ValueError:
@@ -174,7 +172,7 @@ def porog_delivery(message):
         if message.text != None:
             try:
                 int(message.text)
-                r = requests.post('', json={'cost': int(message.text)}).json()
+                r = requests.post('https://serverfor10000.herokuapp.com/api/porog_delivery_post', json={'cost': int(message.text)}).json()
                 if "success" in dict(r).keys():
                     bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
             except ValueError:
@@ -191,9 +189,14 @@ def porog_delivery(message):
 
 def rr(message):
     try:
+        print(message.text)
         if message.text != None:
-            r = requests.post('', json={'cat': message.text, 'cat_new': message.text}).json()
+            print(1)
+            r = requests.post('https://serverfor10000.herokuapp.com/api/category_new_post', json={'cat': message.text,
+                                                                                   'cat_new': message.text}).json()
+            print(r)
             if "success" in dict(r).keys():
+                print(3)
                 bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
         else:
             raise Exception
@@ -205,7 +208,7 @@ def rr(message):
 def rr2(message, e):
     try:
         if message.text != None:
-            r = requests.post('', json={'cat': e, 'cat_new': message.text}).json()
+            r = requests.post('https://serverfor10000.herokuapp.com/api/category_correct_post', json={'cat': e, 'cat_new': message.text}).json()
             if "success" in dict(r).keys():
                 bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
         else:
@@ -218,21 +221,17 @@ def rr2(message, e):
 def rr3(message, e, name,  photo, description):
     try:
         int(message.text)
-        r = requests.post('', json={'category': e, 'name': name, 'photo': photo, 'description': description, 'cost': int(message.text)}).json()
+        r = requests.post('https://serverfor10000.herokuapp.com/api/position_new_post', json={'category': e, 'name': name, 'photo': photo, 'description': description, 'cost': int(message.text)}).json()
         if "success" in dict(r).keys():
             bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
-    except TypeError:
+    except ValueError:
         r = bot.send_message(message.chat.id, "Напишите Стоимость")
         bot.register_next_step_handler(r, rr3, e, name, photo, message.text)
 
 
 @bot.message_handler(content_types=['document'])
 def posit_first(message, category):
-    fi2 = requests.get(f'/api/get_first_fi2/{category}').json()['fi2']
-    if fi2 == None:
-        fi2 = {}
-    else:
-        fi2 = sorted(dict(fi2.position).keys())
+    fi2 = requests.get(f'https://serverfor10000.herokuapp.com/api/get_first_fi2/{category}').json()
     try:
         if message.text != None and message.text not in fi2:
             r = bot.send_message(message.chat.id, "Отправьте Фотографию")
@@ -277,7 +276,7 @@ def posit_third(message, category, name,  photo):
 def correct_pos(message, posit, cat_old):
     try:
         if message.text != None:
-            r = requests.post('', json={'cat_old': cat_old, 'posit': posit, 'new_pos': message.text}).json()
+            r = requests.post('https://serverfor10000.herokuapp.com/api/position_correct_posit_name_post', json={'cat_old': cat_old, 'posit': posit, 'new_pos': message.text}).json()
             if "success" in dict(r).keys():
                 bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
         else:
@@ -298,7 +297,7 @@ def correct_photo(message, posit, cat_old):
         with open("image.jpg", 'wb') as new_file:
             new_file.write(downloaded_file)
         encoded = base64.b64encode(open("image.jpg", "rb").read())
-        r = requests.post('', json={'cat_old': cat_old, 'posit': posit, 'encoded': str(encoded)}).json()
+        r = requests.post('https://serverfor10000.herokuapp.com/api/position_correct_posit_photo_post', json={'cat_old': cat_old, 'posit': posit, 'encoded': str(encoded)}).json()
         if "success" in dict(r).keys():
             bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
     else:
@@ -309,7 +308,7 @@ def correct_photo(message, posit, cat_old):
 def correct_description(message, posit, cat_old):
     try:
         if message.text != None:
-            r = requests.post('', json={'cat_old': cat_old, 'posit': posit, 'description': message.text}).json()
+            r = requests.post('http://127.0.0.1:5000/api/position_correct_posit_description_post', json={'cat_old': cat_old, 'posit': posit, 'description': message.text}).json()
             if "success" in dict(r).keys():
                 bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
         else:
@@ -323,7 +322,7 @@ def correct_cost(message, posit, cat_old):
     try:
         int(message.text)
         try:
-            r = requests.post('', json={'cat_old': cat_old, 'posit': posit, 'cost': int(message.text)}).json()
+            r = requests.post('http://127.0.0.1:5000/api/position_correct_posit_cost_post', json={'cat_old': cat_old, 'posit': posit, 'cost': int(message.text)}).json()
             if "success" in dict(r).keys():
                 bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
         except Exception:
@@ -335,13 +334,13 @@ def correct_cost(message, posit, cat_old):
 
 @bot.callback_query_handler(func=lambda c:True)
 def inline(c):
-    q = requests.get('/api/sorted_keys').json()['q']
+    q = requests.get('https://serverfor10000.herokuapp.com/api/sorted_keys').json()['q']
     if c.data in q:
         r = bot.send_message(c.message.chat.id, "Напишите Новую Категорию", reply_markup=types.ReplyKeyboardRemove())
         bot.register_next_step_handler(r, rr2, c.data)
     elif "del_" in c.data and c.data[4:] in q:
         try:
-            r = requests.post('', json={'cat_old': c.data[4:]}).json()
+            r = requests.post('https://serverfor10000.herokuapp.com/api/delete_category_post', json={'cat_old': c.data[4:]}).json()
             if "success" in dict(r).keys():
                 bot.send_message(c.message.chat.id, "Всё успешно выполнено", reply_markup=markup)
         except Exception:
@@ -351,8 +350,7 @@ def inline(c):
         bot.register_next_step_handler(r, posit_first, c.data[4:])
     elif c.data[8:] in q and "pos_cor_" in c.data:
         try:
-            fi2 = requests.get(f'/api/get_first_fi2/{c.data[8:]}').json()['fi2']
-            fi2 = sorted(dict(fi2.position).keys())
+            fi2 = requests.get(f'https://serverfor10000.herokuapp.com/api/get_first_fi2/{c.data[8:]}').json()['fi2']
             markup_4 = types.InlineKeyboardMarkup()
             if fi2:
                 for i in fi2:
@@ -384,37 +382,43 @@ def inline(c):
                 r = bot.send_message(c.message.chat.id, "Напишите Новую стоимость")
                 bot.register_next_step_handler(r, correct_cost, podition_old, cat_old)
         except Exception:
+            print(1)
             bot.send_message(c.message.chat.id, "Ошибка", reply_markup=markup)
     elif c.data[8:] in q and "pos_del_" in c.data:
         try:
-            fi = requests.get(f'/api/get_fi/{c.data[8:]}').json()['fi']
-            fi2 = requests.get(f'/api/get_first_fi2/{c.data[8:]}').json()['fi2']
-            fi2 = sorted(dict(fi2.position).keys())
+            fi = requests.get(f'https://serverfor10000.herokuapp.com/api/get_fi/{c.data[8:]}').json()['fi']
+            fi2 = requests.get(f'https://serverfor10000.herokuapp.com/api/get_first_fi2/{c.data[8:]}').json()['fi2']
             markup_4 = types.InlineKeyboardMarkup()
-            for i in fi2:
-                btn1 = types.InlineKeyboardButton(i, callback_data=f"del_pos_{c.data[8:]}/{fi.category}/{i}")
-                markup_4.add(btn1)
-            bot.send_message(c.message.chat.id, "Выберите Позицию", reply_markup=markup_4)
+            if fi2:
+                for i in fi2:
+                    btn1 = types.InlineKeyboardButton(i, callback_data=f"del_pos_{c.data[8:]}/{fi}/{i}")
+                    markup_4.add(btn1)
+                bot.send_message(c.message.chat.id, "Выберите Позицию", reply_markup=markup_4)
+            else:
+                bot.send_message(c.message.chat.id, "Сначала добавьте хоть одну позицию", reply_markup=markup)
 
         except Exception:
             bot.send_message(c.message.chat.id, "У вас нет ни одной позиции, добавьте хоть одну позицию", reply_markup=markup)
     elif c.data.split('/')[0][4:] in q:
         try:
-            r = requests.post('', json={'1': c.data.split('/')[0][4:], '2': c.data.split('/')[-1]}).json()
+            r = requests.post('https://serverfor10000.herokuapp.com/api/0_4', json={'1': c.data.split('/')[0][4:], '2': c.data.split('/')[-1]}).json()
             if "success" in dict(r).keys():
                 bot.send_message(c.message.chat.id, "Всё успешно выполнено", reply_markup=markup)
         except Exception:
             pass
     elif c.data[12:].split("/")[0] in q and "pos_cor_new_" in c.data:
         try:
-            fi2 = requests.get(f"/api/get_first_fi2/{c.data[12:].split('/')[0]}").json()['fi2']
-            fi = requests.get(f"/api/get_fi/{c.data[12:].split('/')[0]}").json()['fi']
-            fi2 = sorted(dict(fi2.position).keys())
+            print(c.data[12:].split('/')[0])
+            fi2 = requests.get(f"https://serverfor10000.herokuapp.com/api/get_first_fi2/{c.data[12:].split('/')[0]}").json()['fi2']
+            print(fi2)
+            fi = requests.get(f"https://serverfor10000.herokuapp.com/api/get_fi/{c.data[12:].split('/')[0]}").json()['fi']
+            print(fi2)
+            print(fi)
             if c.data[12:].split('/')[-1] in fi2:
                 markup_4 = types.InlineKeyboardMarkup()
                 w = ["Позиция", "Фото", "Описание", "Стоимость"]
                 for i in w:
-                    btn1 = types.InlineKeyboardButton(i, callback_data=f"{c.data[12:].split('/')[0]}/{fi.category}/{i}/{c.data[12:].split('/')[-1]}")
+                    btn1 = types.InlineKeyboardButton(i, callback_data=f"{c.data[12:].split('/')[0]}/{fi}/{i}/{c.data[12:].split('/')[-1]}")
                     markup_4.add(btn1)
                 bot.send_message(c.message.chat.id, "Выберите что хотите Изменить", reply_markup=markup_4)
 
@@ -422,7 +426,7 @@ def inline(c):
             bot.send_message(c.message.chat.id, "Ошибка", reply_markup=markup)
     elif c.data[8:].split("/")[0] in q and "del_pos_" in c.data:
         try:
-            r = requests.post('', json={'position1': c.data[8:].split("/")[1], 'position2': c.data[8:].split("/")[-1]}).json()
+            r = requests.post('https://serverfor10000.herokuapp.com/api/delete_position_post', json={'position1': c.data[8:].split("/")[1], 'position2': c.data[8:].split("/")[-1]}).json()
             if "success" in dict(r).keys():
                 bot.send_message(c.message.chat.id, "Всё успешно выполнено", reply_markup=markup)
         except Exception:
@@ -430,21 +434,6 @@ def inline(c):
 
 
 if __name__ == '__main__':
-    # user = delivery()
-    # user.delivery = "Порог"
-    # user.cost = 1000
-    # db_sess.add(user)
-    # db_sess.commit()
-    # app.register_blueprint(news_api.blueprint)
-    # app.run(port=5000, host='127.0.0.1')
-    # fi2 = db_sess.query(all).filter(all.category == "eat").first()
-    # print(fi2)
-    # user = all()
-    # user.category = "eat"
-    # user.position = ["banana"]
-    # db_sess.add(user)
-    # db_sess.commit()
-    # fi = db_sess.query(cat).filter(cat.category_new == "eat").first()
     bot.polling(none_stop=True, interval=0)
     # bot.infinity_polling()
 
