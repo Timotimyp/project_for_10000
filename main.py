@@ -2,23 +2,8 @@ import telebot
 from telebot import types
 import pymorphy2
 import wikipedia
-from flask import Flask
-from flask_login import LoginManager
-from flask_restful import Api, Resource, reqparse
 import base64
 import requests
-
-
-app = Flask(__name__)
-
-login_manager = LoginManager()
-login_manager.init_app(app)
-
-app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
-
-
-morph = pymorphy2.MorphAnalyzer()
-wikipedia.set_lang("ru")
 
 bot = telebot.TeleBot('5255950308:AAEY37BTzLlJLAWfgQj3X-w3fDlBjA_1zuY')
 
