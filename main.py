@@ -20,7 +20,7 @@ app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
 morph = pymorphy2.MorphAnalyzer()
 wikipedia.set_lang("ru")
 
-bot = telebot.TeleBot('5346598071:AAFQP1F3IO1Hzea2ECj0a5WsyP_dn5-_fUk')
+bot = telebot.TeleBot('5255950308:AAEY37BTzLlJLAWfgQj3X-w3fDlBjA_1zuY')
 
 
 markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -132,7 +132,6 @@ def self_delivery(message):
             try:
                 w = int(message.text)
                 r = requests.post('https://serverfor10000.herokuapp.com/api/self_delivery_post', json={'cost': w}).json()
-                print(1)
                 if "success" in dict(r).keys():
                     bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
             except ValueError:
@@ -189,14 +188,10 @@ def porog_delivery(message):
 
 def rr(message):
     try:
-        print(message.text)
         if message.text != None:
-            print(1)
             r = requests.post('https://serverfor10000.herokuapp.com/api/category_new_post', json={'cat': message.text,
                                                                                    'cat_new': message.text}).json()
-            print(r)
             if "success" in dict(r).keys():
-                print(3)
                 bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
         else:
             raise Exception
@@ -308,7 +303,10 @@ def correct_photo(message, posit, cat_old):
 def correct_description(message, posit, cat_old):
     try:
         if message.text != None:
-            r = requests.post('http://127.0.0.1:5000/api/position_correct_posit_description_post', json={'cat_old': cat_old, 'posit': posit, 'description': message.text}).json()
+            r = requests.post('https://serverfor10000.herokuapp.com/api/position_correct_posit_description_post',
+                              json={'cat_old': cat_old, 'posit': posit, 'description': message.text}).json()
+            print(r)
+            print('ok')
             if "success" in dict(r).keys():
                 bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
         else:
@@ -322,7 +320,7 @@ def correct_cost(message, posit, cat_old):
     try:
         int(message.text)
         try:
-            r = requests.post('http://127.0.0.1:5000/api/position_correct_posit_cost_post', json={'cat_old': cat_old, 'posit': posit, 'cost': int(message.text)}).json()
+            r = requests.post('https://serverfor10000.herokuapp.com/api/position_correct_posit_cost_post', json={'cat_old': cat_old, 'posit': posit, 'cost': int(message.text)}).json()
             if "success" in dict(r).keys():
                 bot.send_message(message.chat.id, "Всё успешно выполнено", reply_markup=markup)
         except Exception:
@@ -382,7 +380,6 @@ def inline(c):
                 r = bot.send_message(c.message.chat.id, "Напишите Новую стоимость")
                 bot.register_next_step_handler(r, correct_cost, podition_old, cat_old)
         except Exception:
-            print(1)
             bot.send_message(c.message.chat.id, "Ошибка", reply_markup=markup)
     elif c.data[8:] in q and "pos_del_" in c.data:
         try:
@@ -408,12 +405,8 @@ def inline(c):
             pass
     elif c.data[12:].split("/")[0] in q and "pos_cor_new_" in c.data:
         try:
-            print(c.data[12:].split('/')[0])
             fi2 = requests.get(f"https://serverfor10000.herokuapp.com/api/get_first_fi2/{c.data[12:].split('/')[0]}").json()['fi2']
-            print(fi2)
             fi = requests.get(f"https://serverfor10000.herokuapp.com/api/get_fi/{c.data[12:].split('/')[0]}").json()['fi']
-            print(fi2)
-            print(fi)
             if c.data[12:].split('/')[-1] in fi2:
                 markup_4 = types.InlineKeyboardMarkup()
                 w = ["Позиция", "Фото", "Описание", "Стоимость"]
