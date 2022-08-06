@@ -292,7 +292,6 @@ def posit_third(message, category, name, photo):
 def correct_pos(message, posit, cat_old):
     try:
         if message.text != None:
-            print(5)
             codd = s_name[posit]
             s_name.pop(posit)
             s_name[message.text] = codd
